@@ -1,7 +1,17 @@
 #ifndef TINY_GARAGE_DOOR
 
+
 #define VERSION "0.1.0"
 #define BAUD_RATE_115200 (115200)
+
+// Select the correct Serial device automatically 
+// Use Serial_ for all serial port access
+//
+#if defined(ARDUINO_ARCH_SAMD)
+#define Serial_ SerialUSB
+#else
+#define Serial_ Serial
+#endif
 
 // Axis to use
 #define DOOR_TILT_AXIS Z

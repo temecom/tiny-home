@@ -22,25 +22,32 @@ int percentOfFullTravel;
 int doorMotion;
 String doorState;
 
-#if defined(ARDUINO_ARCH_SAMD)
-#define SerialMonitorInterface SerialUSB
-#else
-#define SerialMonitorInterface Serial
-#endif
+
 
 /**
    Set up the IO and serial port
 */
 void setup() {
-  SerialMonitorInterface.begin(BAUD_RATE_115200);
+  Serial_.begin(BAUD_RATE_115200);
   Wire.begin();
-  SerialMonitorInterface.print(F("Tiny-Garage Version: "));
-  SerialMonitorInterface.println(F(VERSION));
+  Serial_.print(F("Tiny-Garage Version: "));
+  Serial_.println(F(VERSION));
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(LED_BUILTIN, OUTPUT);
-  SerialMonitorInterface.print("Initializing BMA...");
+  Serial_.print("Initializing BMA...");
   // Set up the BMA250 acccelerometer sensor
   accel_sensor.begin(BMA250_range_2g, BMA250_update_time_64ms);
+
+  // Flash the led to indicate startup
+  
+  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(1000);                       // wait for a second
+  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
+  
+  // Set up the wifi
+  initializeWifi(); 
+
+
 }
 
 void loop() {
@@ -57,7 +64,7 @@ void loop() {
   // by the sensor
   if (x == -1 && y == -1 && z == -1) {
     // Print error message to Serial Monitor
-    SerialMonitorInterface.print("ERROR! NO BMA250 DETECTED!");
+    Serial_.print("ERROR! NO BMA250 DETECTED!");
   }
 
   else { // if we have correct sensor readings:
@@ -67,7 +74,7 @@ void loop() {
 
   // Report the accelerometer axis as the door position
 
-  SerialMonitorInterface.print("Door: ");
+  Serial_.print("Door: ");
 
   // Check the door state on the axis
   doorAxisValue = accel_sensor.DOOR_TILT_AXIS * BOARD_ORIENTATION;
@@ -79,29 +86,33 @@ void loop() {
     if ( doorMotion> 0) {
       percentOfFullTravel = FULL_TRAVEL / (OPEN_LOWER_THRESHOLD - doorAxisValue);
       doorState = OPENING_STATE;
+      
     } else {
       percentOfFullTravel =  FULL_TRAVEL / (doorAxisValue - CLOSED_UPPER_THRESHOLD);
-
       doorState = CLOSING_STATE;
     }
-    
-     SerialMonitorInterface.print(doorState);
-     SerialMonitorInterface.print("(");
-     SerialMonitorInterface.print(percentOfFullTravel);
-     SerialMonitorInterface.println("%)");
+
+     
+     ledFlash();
+     Serial_.print(doorState);
+     Serial_.print("(");
+     Serial_.print(percentOfFullTravel);
+     Serial_.println("%)");
 
   } else {
     if (doorAxisValue >= OPEN_LOWER_THRESHOLD) {
       // Fully open
       doorState = OPEN_STATE;
+      ledOn();
     }
 
     if (doorAxisValue <= CLOSED_UPPER_THRESHOLD) {
       // Fully closed
       doorState = CLOSED_STATE;
+      ledOff(); 
 
     }
-    SerialMonitorInterface.println(doorState);
+    Serial_.println(doorState);
   }
 
   // Save the last
@@ -109,24 +120,49 @@ void loop() {
 
   // Just a flash to indicate activite
 
-  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);                       // wait for a second
-  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
-  delay(250);
+  delay(500);
   // ***Without the delay, there would not be any sensor output***
 }
 
 // Prints the sensor values to the Serial Monitor, or Serial Plotter (found under 'Tools')
 void showSerial() {
-  SerialMonitorInterface.print("X = ");
-  SerialMonitorInterface.print(x);
+  Serial_.print("X = ");
+  Serial_.print(x);
 
-  SerialMonitorInterface.print("  Y = ");
-  SerialMonitorInterface.print(y);
+  Serial_.print("  Y = ");
+  Serial_.print(y);
 
-  SerialMonitorInterface.print("  Z = ");
-  SerialMonitorInterface.print(z);
+  Serial_.print("  Z = ");
+  Serial_.print(z);
 
-  SerialMonitorInterface.print("  Temperature(C) = ");
-  SerialMonitorInterface.println(temp);
+  Serial_.print("  Temperature(C) = ");
+  Serial_.println(temp);
 }
+
+/**
+ * Subroutine to toggle the led 
+ */
+void ledFlash() {
+  // Flash LED when in 
+  if (digitalRead(LED_BUILTIN) == HIGH) {
+    digitalWrite(LED_BUILTIN, LOW); 
+  } else {
+    digitalWrite(LED_BUILTIN, HIGH); 
+  }
+}
+
+/**
+ * Turn the LED ON
+ */
+
+ void ledOn() {
+  digitalWrite(LED_BUILTIN, HIGH); 
+ }
+
+ /**
+  * Turn LED OFF
+  */
+  void ledOff() {
+         digitalWrite(LED_BUILTIN, LOW); 
+    
+ }
